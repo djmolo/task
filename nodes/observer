@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+import rospy
+from std_msgs.msg import Float32MultiArray
+
+from task import plotting
+from task.msg import Position
+
+
+x_vals = []
+yhat_vals =[]
+
+def callback(data):
+    """
+    Reads in positions from the 'trajectory' topic. Once a starting coordinate
+    is read in, all positions up to and including the ending coordinate are 
+    stored. Once the ending coordinate is read in, a plot is produced, and the
+    process is repeated.
+    """
+    rospy.loginfo(rospy.get_caller_id() + " position received: " + str(data))
+    x, yhat = data.x, data.y                # current position
+    start, end = data.start, data.end       # start and end x-coordinates
+
+    global x_vals
+    global yhat_vals
+
+    complete, x_vals, yhat_vals = plotting.travel(start, end, x, yhat, \
+            x_vals, yhat_vals)
+
+    if complete:    # positions from x=start to x=end have been read in
+        plotting.plot_smoothed_curve(x_vals, yhat_vals)
+        x_vals = []
+        yhat_vals = []
+
+def observer():
+    rospy.init_node('observer')
+    rospy.Subscriber('trajectory', Position, callback)
+    rospy.spin()
+
+if __name__ == '__main__':
+    observer()

@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+import math
+import random
+
+import rospy
+
+from task.msg import Position
+
+
+START = 0.0             # starting x-coordinate
+END = 6.0               # ending x-coordinate
+INCREMENT = 0.01        # distance between each x-coordinate
+max_percent_error = 5
+
+def runner():
+    """
+    Publishes position on sin curve (with error) to the 'trajectory' topic,
+    beginning with x=START, increasing x by INCREMENT each time, and looping
+    back after arriving at x=END.
+    """
+    pub = rospy.Publisher('trajectory', Position, queue_size=10)
+    rospy.init_node('runner', anonymous=True)
+    rate = rospy.Rate(10)   # publish at 10Hz
+    x = START
+    while not rospy.is_shutdown():
+        y = math.sin(x)
+        error = random.uniform(-(max_percent_error/100.0), (max_percent_error/100.0))
+        yhat = y + y*error
+
+        position = Position() 
+        position.x = x
+        position.y = yhat
+        position.start = START  # send starting x-coord with current position 
+        position.end = END      # send ending x-coord with current position
+
+        rospy.loginfo("position: " + str(position))
+        pub.publish(position) 
+
+        if x < END:
+            x += INCREMENT
+        else:
+            x = START
+        rate.sleep()
+
+if __name__ == '__main__':
+    try:
+        runner()
+    except rospy.ROSInterruptException:
+        pass
+
